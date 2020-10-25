@@ -155,11 +155,11 @@ legend("topright", legend = c("Kernal", "True"), col = c("black", "red"),
 We first generate our data.
 ```{r}
 n <- 500
-miu1 <- 0.5
-miu2 <- -0.5
-sig1 <- 0.4
-sig2 <- 0.5
-delta <- 0.5
+miu1 <- 0.1
+miu2 <- -0.1
+sig1 <- 2.1
+sig2 <- 1.9
+delta <- 0.7
 
 set.seed(100)
 u <- rbinom(n,prob = delta, size = 1)
@@ -204,7 +204,7 @@ $$
 \}
 $$
 
-We use `post` function to comopute the log-likelihood,
+We use `logpost` function to comopute the log of posterior density function,
 ```{r}
 logpost <- function(theta, data){
   delta <- theta[1]
@@ -216,7 +216,7 @@ logpost <- function(theta, data){
   return(logpi + sum(loglik))
 }
 ```
-We 
+Function `mymcmc` below is given to estimate the 5 parameters. The values calculated in first 100 irritations are abondoned.  
 
 ```{r}
 mymcmc <- function(niter, thetaInit, data, nburn = 100){
@@ -242,12 +242,15 @@ mymcmc <- function(niter, thetaInit, data, nburn = 100){
 }
 ```
 
-test
+The outcome here is not ideal.The possible reason could be the inaproporiate choice of the proposal funciton.
 
 !```{r}
 niter <- 1000
-thetaInit <- rep(0.2,5)
+thetaInit <- rep(1,5)
 sim <- mymcmc(niter,thetaInit,x)
-warnings()
-plot(ts(sim[,1]))
+plot(ts(sim[,1]), main = "theta")
+plot(ts(sim[,2]), main = "miu1")
+plot(ts(sim[,3]), main = "miu2")
+plot(ts(sim[,4]), main = "sigma1")
+plot(ts(sim[,5]), main = "sigma2")
 ```
