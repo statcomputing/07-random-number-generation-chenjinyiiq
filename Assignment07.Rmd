@@ -1,0 +1,253 @@
+---
+title: "Assignment07"
+author: "Jinyi Chen"
+date: "2020/10/24"
+output:
+  html_document:
+    df_print: paged
+---
+# Exercise 5.3.1
+
+## Question 1
+
+We can find that
+\begin{equation*}
+\begin{aligned}
+& C\int^{\infty}_0(2x^{(\theta-1)}+x^{(\theta-\frac{1}{2})})e^{-x}dx\\
+ =\ &C\int^{\infty}_0 2x^{(\theta-1)}e^{-x}dx+
+C\int^{\infty}_0 x^{(\theta-\frac{1}{2})}e^{-x}dx\\
+ =\ &C\{2\Gamma(\theta)+\Gamma(\theta+\frac{1}{2})\}=1
+\end{aligned}
+\end{equation*}
+
+Then, $C = \frac{1}{2\Gamma(\theta)+\Gamma(\theta+1/2)}$.
+
+Suppose
+$$
+g_1(x)= \frac{1}{\Gamma(\theta)} x^{(\theta-1)}e^{-x} \\
+g_2(x)= \frac{1}{\Gamma(\theta+1/2)}x^{(\theta-\frac{1}{2})}e^{-x}
+$$
+and set
+$$
+g(x)= \omega_1g_1(x)+\omega_2g_2(x)
+$$
+where $\omega_1+\omega_2=1$.
+
+We can obtain
+$$
+\omega_1= \frac{2\Gamma(\theta)}{2\Gamma(\theta)+\Gamma(\theta+1/2)} \\
+\omega_2= \frac{\Gamma(\theta+1/2)}{2\Gamma(\theta)+\Gamma(\theta+1/2)}
+$$
+$g_1(x)$ and $g_2(x)$ are the component distributions and their weights are $\omega_1$ and $\omega_2$.
+
+
+## Question 2
+
+`g_random` function is given blow to generate one value of random varaible with $g(x)$ as the density function.
+```{r}
+g_random <- function(theta, u, maxit = 1000, tol = 1e-5, init = 1) {
+  alpha <- c(theta, theta + 0.5)
+  weight <- gamma(alpha)
+  weight[1] <- 2*weight[1]
+  weight <- weight/ sum(weight)
+  x <- init
+  for (i in 1 : maxit) {
+    upda <- (sum(weight * pgamma(x, alpha)) - u) / 
+      sum(weight * dgamma(x, alpha))
+    if (abs(upda) < tol) return(x)
+    x <- x - upda
+    if (i == maxit) warning("Max itiration reached")
+  }
+}
+```
+We start to generate our sample with sample size $n = 10,000$ and $\theta=1.5$.
+```{r}
+n <- 10000 
+theta <- 1.5
+u <- runif(n) 
+
+sample <- rep(0, n) 
+for (i in 1 : n) {
+  sample[i] <- g_random(theta, u[i])
+}
+
+# Calculate the true density
+x <- seq(min(sample),max(sample),0.1)
+alpha <- c(theta, theta + 0.5)
+weight <- gamma(alpha)
+weight[1] <- 2*weight[1]
+weight <- weight/ sum(weight)
+g0 <- function(x,theta){
+  x^(theta-1)*exp(-x)/gamma(theta)
+}
+y <- weight[1]*g0(x,theta) + weight[2]*g0(x,theta+.5)
+
+plot(density(sample),col="black",main = "Kernel density and the true density with theta = 1.5"
+     ,xlab = "X",lty = 1)
+lines(x,y,col="red",lty=2)
+legend("topright", legend = c("Kernal", "True"), col = c("black", "red"),
+       lty = c(1, 2))
+```
+
+## Question 3
+Easy to show that $2x^{\frac{1}{2}} \leq \sqrt{4+x} \leq 2+x^{\frac{1}{2}}$ for $x>0$, hence we have 
+$$
+\sqrt{4+x}\ x^{\theta-1}e^{-x} \leq 
+(2+x^{\frac{1}{2}})x^{\theta-1}e^{-x}.
+$$
+Suppose $q(x)=\sqrt{4+x}\ x^{\theta-1}e^{-x}$,$f(x)=\frac{1}{B}\sqrt{4+x}\ x^{\theta-1}e^{-x}$ where $B$ is a constant.
+From the inequation above and what we know in Question 1, we have
+$$
+C q(x) \leq g(x)
+$$
+We write
+$$
+\frac{q(x)}{\alpha g(x)}=\frac{\sqrt{4+x}}{2+x^{1/2}}
+$$
+where $\alpha = \frac{1}{C}$.
+
+`f_random` function blow is given below to generate the sample with $f(x)$ as the density.
+
+```{r}
+f_random <- function(n, theta, maxit = 1000){
+  x <- rep(0, n)
+  j <- 1
+  while(j < n) {
+    for (i in 1 : maxit) {
+    y <- g_random(theta, runif(1))
+    u <- runif(1)
+    crit <-  sqrt(4 + y) / (2 + y ^ (1/2))
+      if (u <= crit){
+        x[j] = y
+        j <- j + 1
+        break
+      }
+      if (i == maxit){
+        j <- j
+      }
+    }
+  }
+  return(x)
+}
+
+```
+We generate a sample with sample size $n = 10000$ and $\theta=0.15$ and compare it with the true density function.
+```{r}
+sample2 <- f_random(n,theta)
+# Calculate the true density
+x <- seq(min(sample2),max(sample2),0.1)
+fx <- function(x, ...){
+  sqrt(4 + x) * x ^ (theta - 1) * exp(-x)
+}
+B <-  integrate(fx, 0, Inf)$value
+y <- fx(x) / B
+
+plot(density(sample2),col="black",main = "Kernel density and the true density with theta = 1.5"
+     ,xlab = "X",lty = 1)
+lines(x,y,col="red",lty=2)
+legend("topright", legend = c("Kernal", "True"), col = c("black", "red"),
+       lty = c(1, 2))
+
+```
+
+# Exercise 6.3.1
+
+We first generate our data.
+```{r}
+n <- 500
+miu1 <- 0.5
+miu2 <- -0.5
+sig1 <- 0.4
+sig2 <- 0.5
+delta <- 0.5
+
+set.seed(100)
+u <- rbinom(n,prob = delta, size = 1)
+x <- rnorm(n,ifelse(u==1, miu1, miu2), ifelse(u==1, sig1, sig2))
+```
+
+Define $\boldsymbol{X}=(x_1,x_2,...,x_n)$ as our sample and $\boldsymbol{\theta}=(\delta,\mu_1,\mu_2,\sigma_1,\sigma_2)$ as the paramater vector.
+The likelihood function $L(\boldsymbol{\theta}|\boldsymbol{X})$, is given by 
+
+$$
+L(\boldsymbol{\theta}|\boldsymbol{X})=
+\prod_{i=1}^n\{\delta f(x_i|\mu_1,\sigma_1)+(1-\delta)f(x_i|\mu_2,\sigma_2)\}
+$$
+
+where $f(x|\mu,\sigma)=\frac{1}{10\sqrt{2\pi}}\exp(-\frac{(x-\mu)^2}{200})$.
+
+The piror density of $\boldsymbol\theta$ is given by
+$$
+\pi(\boldsymbol{\theta)} = \frac{\sigma_1\sigma_2}{20\pi^2}
+\exp\{-\frac{10(\sigma_1^2+\sigma_2^2)}{\sigma_1^2\sigma_2^2}
+-\frac{\mu_1^2+\mu_2^2}{200}\}
+$$
+
+For the posterior density defined by $\boldsymbol\theta$, we have
+$$
+\pi(\boldsymbol\theta|\boldsymbol{X}) \propto 
+L(\boldsymbol{\theta}|\boldsymbol{X})\pi(\boldsymbol{\theta)}=
+\prod_{i=1}^n
+\{
+\delta f(x_i|\mu_1,\sigma_1)
++(1-\delta)f(x_i|\mu_2,\sigma_2)
+\}
+\pi(\boldsymbol{\theta)}
+$$
+Then we obtain 
+$$
+\pi(\boldsymbol\theta|\boldsymbol{X}) \propto 
+\sigma_1\sigma_2\exp\{-\frac{10(\sigma_1^2+\sigma_2^2)}{\sigma_1^2\sigma_2^2}
+-\frac{\mu_1^2+\mu_2^2}{200}\}
+\prod_{i=1}^n\{\delta \exp(-\frac{(x_i-\mu_1)^2}{200})
++(1-\delta)\exp(-\frac{(x_i-\mu_2)^2}{200})
+\}
+$$
+
+We use `post` function to comopute the log-likelihood,
+```{r}
+logpost <- function(theta, data){
+  delta <- theta[1]
+  miu1 <- theta[2]; miu2 <- theta[3]
+  sig1 <- theta[4]; sig2 <- theta[5]
+  x <-data
+  logpi <- log(sig1) + log(sig2) - 10 * (1/sig1^2 + 1/sig2^2) - (miu1^2 + miu2^2)/200
+  loglik <- log(delta*exp(-(x-miu1)^2/200) + (1-delta)*exp(-(x-miu2)^2/200))
+  return(logpi + sum(loglik))
+}
+```
+We 
+
+```{r}
+mymcmc <- function(niter, thetaInit, data, nburn = 100){
+  p <- length(thetaInit)
+  thetaCurrent <- thetaInit
+  ## Define a function for full conditional sampling
+  logFC <- function(th,idx){
+    theta <- thetaCurrent
+    theta[idx] <- th
+    logpost(theta,data)
+  }
+  out <- matrix(thetaInit,niter,p,byrow = TRUE)
+  ## Gibbs sampling
+  for(i in 2:niter){
+    for(j in 1:p){
+      out[i,j] <- thetaCurrent[j] <-
+        HI::arms(thetaCurrent[j],logFC,
+                 function(x, idx) ((x > -10) * (x < 10)),
+                 n.sample = 1,idx = j)
+    }
+  }
+  out[-(1:nburn),]
+}
+```
+
+test
+
+!```{r}
+niter <- 1000
+thetaInit <- rep(0.2,5)
+sim <- mymcmc(niter,thetaInit,x)
+warnings()
+plot(ts(sim[,1]))
+```
