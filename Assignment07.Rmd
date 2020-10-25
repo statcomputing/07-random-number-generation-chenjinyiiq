@@ -3,8 +3,8 @@ title: "Assignment07"
 author: "Jinyi Chen"
 date: "2020/10/24"
 output:
-  html_document:
-    df_print: paged
+  pdf_document: default
+
 ---
 # Exercise 5.3.1
 
